@@ -1,0 +1,10 @@
+.DS_Store
+.idea
+*.log
+tmp/
+common.o
+config.h
+libsurf-webext.o
+libsurf-webext.so
+surf
+surf.o
