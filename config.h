@@ -6,6 +6,7 @@ static char *styledir       = "~/.config/surf/styles/";
 static char *certdir        = "~/.config/surf/certificates/";
 static char *cachedir       = "~/.config/surf/cache/";
 static char *cookiefile     = "~/.config/surf/cookies.txt";
+static char *downloaddir    = "~/Downloads";
 
 static char *searchengine = "https://duckduckgo.com/?q=";
 
@@ -96,11 +97,10 @@ static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
 /* DOWNLOAD(URI, referer) */
 #define DOWNLOAD(d, r) { \
 	.v = (char *[]){ "/bin/sh", "-c", \
-		"cd ~/Telechargements;"\
-		"st -e /bin/sh -c \"aria2c -U '$1'" \
-		" --referer '$2' --load-cookies $3 --save-cookies $3 '$0';" \
+		" st -e /bin/sh -c \"aria2c -U '$1'" \
+		" --referer '$2' -d $3 --load-cookies $4 --save-cookies $4 '$0';" \
 		" sleep 3;\"", \
-		d, useragent, r, cookiefile, NULL \
+		d, useragent, r, downloaddir, cookiefile, NULL \
 	} \
 }
 /* PLUMB(URI) */
