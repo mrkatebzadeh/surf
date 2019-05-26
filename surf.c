@@ -129,6 +129,11 @@ typedef struct {
 } Button;
 
 typedef struct {
+	char *token;
+	char *uri;
+} SearchEngine;
+
+typedef struct {
 	const char *uri;
 	Parameter config[ParameterLast];
 	regex_t re;
@@ -175,6 +180,7 @@ static void spawn(Client *c, const Arg *a);
 static void msgext(Client *c, char type, const Arg *a);
 static void destroyclient(Client *c);
 static void cleanup(void);
+static int insertmode = 0;
 
 /* GTK/WebKit */
 static WebKitWebView *newview(Client *c, WebKitWebView *rv);
@@ -214,6 +220,7 @@ static void webprocessterminated(WebKitWebView *v,
                                  Client *c);
 static void closeview(WebKitWebView *v, Client *c);
 static void destroywin(GtkWidget* w, Client *c);
+static gchar *parseuri(const gchar *uri);
 
 /* Hotkeys */
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
@@ -231,6 +238,7 @@ static void togglefullscreen(Client *c, const Arg *a);
 static void togglecookiepolicy(Client *c, const Arg *a);
 static void toggleinspector(Client *c, const Arg *a);
 static void find(Client *c, const Arg *a);
+static void insert(Client *c, const Arg *a);
 
 /* Buttons */
 static void clicknavigate(Client *c, const Arg *a, WebKitHitTestResult *h);
@@ -559,7 +567,15 @@ loaduri(Client *c, const Arg *a)
 			url = g_strdup_printf("file://%s", path);
 			free(path);
 		} else {
-			url = g_strdup_printf("http://%s", uri);
+			regex_t urlregex;
+			int urlcheck;
+			urlcheck = regcomp(&urlregex, "^[a-z0-9-]+[.][a-z.]+[^[:space:]]*$", REG_EXTENDED | REG_ICASE);
+			urlcheck = regexec(&urlregex, uri, 0, NULL, 0);
+			if (!urlcheck)
+				url = g_strdup_printf("http://%s", uri);
+			else
+				url = parseuri(uri);
+			regfree(&urlregex);
 		}
 		if (apath != uri)
 			free(apath);
@@ -1209,20 +1225,22 @@ newview(Client *c, WebKitWebView *rv)
 static gboolean
 readpipe(GIOChannel *s, GIOCondition ioc, gpointer unused)
 {
-	char msg[MSGBUFSZ];
-	gsize msgsz;
+	static char msg[MSGBUFSZ], msgsz;
 	GError *gerr = NULL;
 
-	if (g_io_channel_read_chars(s, msg, sizeof(msg), &msgsz, &gerr) !=
+	if (g_io_channel_read_chars(s, msg, sizeof(msg), NULL, &gerr) !=
 	    G_IO_STATUS_NORMAL) {
 		fprintf(stderr, "surf: error reading pipe: %s\n",
 		        gerr->message);
 		g_error_free(gerr);
 		return TRUE;
 	}
-	msg[msgsz] = '\0';
+	if ((msgsz = msg[0]) < 3) {
+		fprintf(stderr, "surf: message too short: %d\n", msgsz);
+		return TRUE;
+	}
 
-	switch (msg[1]) {
+	switch (msg[2]) {
 	case 'i':
 		close(pipein[1]);
 		close(pipeout[0]);
@@ -1331,7 +1349,11 @@ winevent(GtkWidget *w, GdkEvent *e, Client *c)
 		updatetitle(c);
 		break;
 	case GDK_KEY_PRESS:
-		if (!curconfig[KioskMode].val.i) {
+		if (!curconfig[KioskMode].val.i &&
+		    !insertmode ||
+		    CLEANMASK(e->key.state) == (MODKEY|GDK_SHIFT_MASK) ||
+		    CLEANMASK(e->key.state) == (MODKEY) ||
+		    gdk_keyval_to_lower(e->key.keyval) == (GDK_KEY_Escape)) {
 			for (i = 0; i < LENGTH(keys); ++i) {
 				if (gdk_keyval_to_lower(e->key.keyval) ==
 				    keys[i].keyval &&
@@ -1763,6 +1785,22 @@ destroywin(GtkWidget* w, Client *c)
 		gtk_main_quit();
 }
 
+gchar *
+parseuri(const gchar *uri) {
+	guint i;
+
+	for (i = 0; i < LENGTH(searchengines); i++) {
+		if (searchengines[i].token == NULL || searchengines[i].uri == NULL ||
+		    *(uri + strlen(searchengines[i].token)) != ' ')
+			continue;
+		if (g_str_has_prefix(uri, searchengines[i].token))
+			return g_strdup_printf(searchengines[i].uri,
+					       uri + strlen(searchengines[i].token) + 1);
+	}
+
+	return g_strdup_printf("%s%s", searchengine, uri);
+}
+
 void
 pasteuri(GtkClipboard *clipboard, const char *text, gpointer d)
 {
@@ -1843,12 +1881,18 @@ zoom(Client *c, const Arg *a)
 static void
 msgext(Client *c, char type, const Arg *a)
 {
-	char msg[MSGBUFSZ] = { c->pageid, type, a->i, '\0' };
+	static char msg[MSGBUFSZ];
+	int ret;
 
-	if (pipeout[1]) {
-		if (write(pipeout[1], msg, sizeof(msg)) < 0)
-			fprintf(stderr, "surf: error sending: %s\n", msg);
+	if ((ret = snprintf(msg, sizeof(msg), "%c%c%c%c",
+	                    4, c->pageid, type, a->i))
+	    >= sizeof(msg)) {
+		fprintf(stderr, "surf: message too long: %d\n", ret);
+		return;
 	}
+
+	if (pipeout[1] && write(pipeout[1], msg, sizeof(msg)) < 0)
+		fprintf(stderr, "surf: error sending: %.*s\n", ret-2, msg+2);
 }
 
 void
@@ -1937,6 +1981,12 @@ find(Client *c, const Arg *a)
 		if (strcmp(s, "") == 0)
 			webkit_find_controller_search_finish(c->finder);
 	}
+}
+
+void
+insert(Client *c, const Arg *a)
+{
+		insertmode = (a->i);
 }
 
 void
