@@ -27,6 +27,8 @@ static SearchEngine searchengines[] = {
 	{ "wt",		"https://www.wiktionary.org/search-redirect.php?family=wiktionary&language=en&search=%s&go=Go" },
 	{ "w",		"https://www.wikipedia.org/search-redirect.php?family=wikipedia&language=en&search=%s&language=en&go=Go" },
 	{ "yt",		"https://www.youtube.com/results?search_query=%s" },
+    { "en",       "http://dict.cc/?s=%s" },
+    { "dict",     "http://www.thefreedictionary.com/%s" },
 };
 
 /* Webkit default features */
