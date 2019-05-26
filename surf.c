@@ -180,6 +180,7 @@ static void spawn(Client *c, const Arg *a);
 static void msgext(Client *c, char type, const Arg *a);
 static void destroyclient(Client *c);
 static void cleanup(void);
+static void updatehistory(const char *u, const char *t);
 static int insertmode = 0;
 
 /* GTK/WebKit */
@@ -348,6 +349,7 @@ setup(void)
 	scriptfile = buildfile(scriptfile);
 	cachedir   = buildpath(cachedir);
 	certdir    = buildpath(certdir);
+    historyfile = buildfile(historyfile);
 
 	gdkkb = gdk_seat_get_keyboard(gdk_display_get_default_seat(gdpy));
 
@@ -1092,10 +1094,26 @@ cleanup(void)
 	close(pipein[0]);
 	close(pipeout[1]);
 	g_free(cookiefile);
+    g_free(historyfile);
 	g_free(scriptfile);
 	g_free(stylefile);
 	g_free(cachedir);
 	XCloseDisplay(dpy);
+}
+
+void
+updatehistory(const char *u, const char *t)
+{
+	FILE *f;
+	f = fopen(historyfile, "a+");
+
+	char b[20];
+	time_t now = time (0);
+	strftime (b, 20, "%Y-%m-%d %H:%M:%S", localtime (&now));
+	fputs(b, f);
+
+	fprintf(f, " %s %s\n", u, t);
+	fclose(f);
 }
 
 WebKitWebView *
@@ -1522,6 +1540,7 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 		c->title = uri;
 		c->https = c->insecure = 0;
 		seturiparameters(c, uri, loadtransient);
+        updatehistory(uri, c->title);
 		if (c->errorpage)
 			c->errorpage = 0;
 		else

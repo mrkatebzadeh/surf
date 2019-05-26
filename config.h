@@ -6,7 +6,10 @@ static char *styledir       = "~/.config/surf/styles/";
 static char *certdir        = "~/.config/surf/certificates/";
 static char *cachedir       = "~/.config/surf/cache/";
 static char *cookiefile     = "~/.config/surf/cookies.txt";
-static char *downloaddir    = "~/Downloads";
+#define bookmarks           "~/.config/surf/bookmarks"
+#define downloaddir         "~/Downloads"
+#define history             "~/.config/surf/history"
+static const char *historyfile    = history;
 
 static char *searchengine = "https://duckduckgo.com/?q=";
 
@@ -87,10 +90,20 @@ static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
 #define SETPROP(r, s, p) { \
         .v = (const char *[]){ "/bin/sh", "-c", \
              "prop=\"$(printf '%b' \"$(xprop -id $1 $2 " \
-             "| sed \"s/^$2(STRING) = //;s/^\\\"\\(.*\\)\\\"$/\\1/\" && cut -d' ' -f1 ~/.config/bookmarks)\" " \
+             "| sed \"s/^$2(STRING) = //;s/^\\\"\\(.*\\)\\\"$/\\1/\" && (file=$5 ; eval file=$file; cut -d' ' -f1 $file))\" " \
              "| dmen -i -l 10 -p \"$4\" -w $1)\" && " \
              "xprop -id $1 -f $3 8s -set $3 \"$prop\"", \
-             "surf-setprop", winid, r, s, p, NULL \
+             "surf-setprop", winid, r, s, p, bookmarks, NULL \
+        } \
+}
+
+#define SETURI(r, s, p){ \
+        .v = (const char *[]){ "/bin/sh", "-c", \
+             "prop=\"$(printf '%b' \"$(xprop -id $1 $2 " \
+             "| sed \"s/^$2(STRING) = //;s/^\\\"\\(.*\\)\\\"$/\\1/\" && (file=$5 ; eval file=$file; cut -d' ' -f3 $file))\" " \
+             "| dmen -i -l 10 -p \"$4\" -w $1)\" && " \
+             "xprop -id $1 -f $3 8s -set $3 \"$prop\"", \
+             "surf-setprop", winid, r, s, p, history, NULL \
         } \
 }
 
@@ -127,6 +140,16 @@ static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
              winid, NULL \
         } \
 }
+/* BM_ADD(readprop) */
+#define BM_ADD(r) {\
+        .v = (const char *[]){ "/bin/sh", "-c", \
+             "(echo $(xprop -id $0 $1) | cut -d '\"' -f2 " \
+             "| sed 's/.*https*:\\/\\/\\(www\\.\\)\\?//' && (file=$2; eval file=$file; cat $file)) " \
+             "| (file=$2; eval file=$file;awk '!seen[$0]++' > $file.tmp) && " \
+             "(file=$2; eval file=$file; mv $file.tmp $file) ", \
+             winid, r, bookmarks, NULL \
+        } \
+}
 
 /* styles */
 /*
@@ -156,9 +179,10 @@ static SiteSpecific certs[] = {
  */
 static Key keys[] = {
 	/* modifier              keyval          function    arg */
-	{ 0,			GDK_KEY_g,	spawn,	SETPROP("_SURF_URI", "_SURF_GO", PROMPT_GO) },
-	{ 0,			GDK_KEY_f,	spawn,	SETPROP("_SURF_FIND", "_SURF_FIND", PROMPT_FIND) },
 	{ 0,			GDK_KEY_slash,	spawn,	SETPROP("_SURF_FIND", "_SURF_FIND", PROMPT_FIND) },
+	{ MODKEY,		GDK_KEY_l,	spawn,	SETPROP("_SURF_URI", "_SURF_GO", PROMPT_GO) },
+	{ MODKEY,		GDK_KEY_h,	spawn,	SETURI("_SURF_URI", "_SURF_GO", PROMPT_GO) },
+	{ MODKEY,		GDK_KEY_b,	spawn,	BM_ADD("_SURF_URI") },
 	{ 0,			GDK_KEY_w,	spawn,	MPV },
 
 	{ 0,			GDK_KEY_i,	insert,     { .i = 1 } },
