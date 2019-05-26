@@ -1,7 +1,6 @@
 /* modifier 0 means no modifier */
 static int surfuseragent    = 1;  /* Append Surf version to default WebKit user agent */
 static char *fulluseragent  = ""; /* Or override the whole user agent string */
-static char *scriptfile     = "~/.config/surf/script.js";
 static char *styledir       = "~/.config/surf/styles/";
 static char *certdir        = "~/.config/surf/certificates/";
 static char *cachedir       = "~/.config/surf/cache/";
@@ -10,6 +9,11 @@ static char *cookiefile     = "~/.config/surf/cookies.txt";
 #define downloaddir         "~/Downloads"
 #define history             "~/.config/surf/history"
 static const char *historyfile    = history;
+static char *scriptfiles[]  = {
+	"~/.config/surf/scripts/followlink.js",
+    "~/.config/surf/scripts/keybind.js",
+	"~/.config/surf/scripts/simpleread.js",
+};
 
 static char *searchengine = "https://duckduckgo.com/?q=";
 

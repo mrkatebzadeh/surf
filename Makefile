@@ -66,7 +66,7 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/surf
 	rm -f $(DESTDIR)$(MANPREFIX)/man1/surf.1
 	rm -f $(DESTDIR)$(LIBDIR)/libsurf-webext.so
-	- rmdir $(DESTDIR)$(LIBDIR)
+	rmdir $(DESTDIR)$(LIBDIR)
 
 .SUFFIXES: .so .o .c
 .PHONY: all options clean-dist clean dist install uninstall
