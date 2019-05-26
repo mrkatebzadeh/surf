@@ -11,8 +11,6 @@ static char *cookiefile     = "~/.config/surf/cookies.txt";
 static const char *historyfile    = history;
 static char *scriptfiles[]  = {
 	"~/.config/surf/scripts/followlink.js",
-    "~/.config/surf/scripts/keybind.js",
-	"~/.config/surf/scripts/simpleread.js",
 };
 
 static char *searchengine = "https://duckduckgo.com/?q=";
@@ -197,8 +195,8 @@ static Key keys[] = {
 	{ MODKEY,		GDK_KEY_r,	reload,     { .i = 1 } },
 	{ 0,			GDK_KEY_r,	reload,     { .i = 0 } },
 
-	{ 0,			GDK_KEY_l,	navigate,   { .i = +1 } },
-	{ 0,			GDK_KEY_h,	navigate,   { .i = -1 } },
+	{ GDK_SHIFT_MASK,			GDK_KEY_l,	navigate,   { .i = +1 } },
+	{ GDK_SHIFT_MASK,			GDK_KEY_h,	navigate,   { .i = -1 } },
 
 	/* vertical and horizontal scrolling, in viewport percentage */
 	{ 0,			GDK_KEY_j,	scrollv,    { .i = +10 } },
